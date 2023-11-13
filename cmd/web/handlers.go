@@ -10,7 +10,7 @@ import (
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	//Check if the url path is strictly '/'
 	if r.URL.Path != "/" {
-		http.NotFound(w, r)
+		app.notFound(w)
 		return
 	}
 
@@ -22,14 +22,12 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 
 	ts, err := template.ParseFiles(files...)
 	if err != nil {
-		app.errorLog.Println(err.Error())
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		app.serverError(w, err)
 		return
 	}
 	err = ts.ExecuteTemplate(w, "base", nil)
 	if err != nil {
-		app.errorLog.Println(err.Error())
-		http.Error(w, "Internal Server Error", 500)
+		app.serverError(w, err)
 	}
 }
 
@@ -52,7 +50,7 @@ func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 		// w.WriteHeader(405)
 		// w.Write([]byte("Method Not Allowed"))
 
-		http.Error(w, "Method Not Allowed", 405) // Alternative way of writing error response
+		app.clientError(w, 405) // Alternative way of writing error response
 		return
 	}
 	w.Write([]byte("Snippet is created"))
