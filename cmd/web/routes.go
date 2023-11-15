@@ -7,7 +7,6 @@ func (app *application) routes() *http.ServeMux {
 
 	//Register mux To handle static file
 	fileServer := http.FileServer(http.Dir("./ui/static/"))
-
 	mux.Handle("/static/", http.StripPrefix("/static", fileServer))
 
 	//Register the other application routes
