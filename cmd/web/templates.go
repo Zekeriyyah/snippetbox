@@ -30,16 +30,24 @@ func newTemplateCache() (map[string]*template.Template, error) {
 		name := filepath.Base(page)
 
 		//Create a slice to hold the static files to be parse
-		
-		//To parse the base template
-		ts, err := template.ParseFiles("./ui/html/base.tmpl.html")
+
+		// //To parse the base template
+		// ts, err := template.ParseFiles("./ui/html/base.tmpl.html")
+		// if err != nil {
+		// 	return nil, err
+		// }
+
+		//To make use of custom template function humanDate, register the FuncMap with the template set and call ParseFile
+		//to parse the templates
+
+		ts, err := template.New(name).Funcs(functions).ParseFiles("./ui/html/base.tmpl.html")
 		if err != nil {
 			return nil, err
 		}
-		
+
 		//To parse all template files in the partials directory
 		ts, err = ts.ParseGlob("./ui/html/partials/*.tmpl.html")
-		if err !=nil {
+		if err != nil {
 			return nil, err
 		}
 

@@ -16,6 +16,8 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//panic("oops! something went wrong") //Deliberate panic to test my recoverPanic middleware use in stack tracing the error to server error log to return error 500 for better user experience
+
 	snippets, err := app.snippets.Latest()
 	if err != nil {
 		app.serverError(w, err)
