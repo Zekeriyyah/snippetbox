@@ -63,32 +63,35 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
-	//Parse the form data and populate r.PostForm map
-	if err := r.ParseForm(); err != nil {
-		app.clientError(w, http.StatusBadRequest)
-		return
-	}
+	// Declare a new empty instance of the snippetCreateForm struct.
+	var form SnippetCreateForm
 
-	//Convert the value of the form data expires to int
-	expires, err := strconv.Atoi(r.PostForm.Get("expires"))
+	err := app.decodePostForm(r, &form)
 	if err != nil {
 		app.clientError(w, http.StatusBadRequest)
 		return
 	}
 
-	//Initializing Struct SnippetCreateForm to hold the inputed data by user
+	// //Convert the value of the form data expires to int
+	// expires, err := strconv.Atoi(r.PostForm.Get("expires"))
+	// if err != nil {
+	// 	app.clientError(w, http.StatusBadRequest)
+	// 	return
+	// }
 
-	form := SnippetCreateForm{
-		Title:   r.PostForm.Get("title"),
-		Content: r.PostForm.Get("content"),
-		Expires: expires,
-	}
+	// //Initializing Struct SnippetCreateForm to hold the inputed data by user
+
+	// form := SnippetCreateForm{
+	// 	Title:   r.PostForm.Get("title"),
+	// 	Content: r.PostForm.Get("content"),
+	// 	Expires: expires,
+	// }
 
 	// Using CheckFied() to write appropriate error message after validating the form
 	form.CheckField(validator.NotBlank(form.Title), "title", "*This field cannot be blank!")
 	form.CheckField(validator.MaxChars(form.Title, 100), "title", "*This field cannot be morethan 100 characters")
 	form.CheckField(validator.NotBlank(form.Content), "content", "*This field cannot be blank!")
-	form.CheckField(validator.PermittedInt(expires, 1, 7, 365), "expires", "*This field must not take value other than 1, 7 or 365")
+	form.CheckField(validator.PermittedInt(form.Expires, 1, 7, 365), "expires", "*This field must not take value other than 1, 7 or 365")
 
 	if !form.Valid() {
 		data := app.newTemplateData(r)
