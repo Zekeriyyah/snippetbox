@@ -2,10 +2,13 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime/debug"
 	"time"
+
+	"github.com/go-playground/form"
 )
 
 // Create a serverError helper to write error message and stack trace to errorLog
@@ -56,4 +59,26 @@ func (app *application) newTemplateData(r *http.Request) *templateData {
 	return &templateData{
 		CurrentYear: time.Now().Year(),
 	}
+}
+
+func (app *application) decodePostForm(r *http.Request, dst any) error {
+	//Parse the form data and populate r.PostForm map
+	if err := r.ParseForm(); err != nil {
+		return err
+	}
+
+	//Call Decode() on the decoder to decode the form data to a struct
+	err := app.formDecoder.Decode(dst, r.PostForm)
+	if err != nil {
+		//Special check for form.InvalideDecodeError should in case of nil pointer dereferencing
+		var invalidDecoderError *form.InvalidDecoderError
+
+		if errors.As(err, &invalidDecoderError) {
+			panic(err)
+		}
+
+		return err
+	}
+
+	return nil
 }
