@@ -7,16 +7,18 @@ import (
 	"strconv"
 
 	"github.com/Zekeriyyah/snippetbox/internal/models"
+	"github.com/Zekeriyyah/snippetbox/internal/validator"
+	"github.com/julienschmidt/httprouter"
 )
 
-func (app *application) home(w http.ResponseWriter, r *http.Request) {
-	//Check if the url path is strictly '/'
-	if r.URL.Path != "/" {
-		app.notFound(w)
-		return
-	}
+type SnippetCreateForm struct {
+	Title               string `form:"title"`
+	Content             string `form:"content"`
+	Expires             int    `form:"expires"`
+	validator.Validator `form:"-"`
+}
 
-	//panic("oops! something went wrong") //Deliberate panic to test my recoverPanic middleware use in stack tracing the error to server error log to return error 500 for better user experience
+func (app *application) home(w http.ResponseWriter, r *http.Request) {
 
 	snippets, err := app.snippets.Latest()
 	if err != nil {
@@ -33,7 +35,10 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(r.URL.Query().Get("id"))
+
+	params := httprouter.ParamsFromContext(r.Context())
+
+	id, err := strconv.Atoi(params.ByName("id"))
 	if err != nil || id < 1 {
 		app.notFound(w)
 		return
@@ -57,33 +62,60 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 	app.render(w, http.StatusOK, "view.tmpl.html", data)
 }
 
-func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
-	//Check for method if POST
-	w.Header()["Content-Type"] = nil
-	if r.Method != "POST" {
-
-		w.Header().Set("Allow", "POST")
-
-		// w.WriteHeader(405)
-		// w.Write([]byte("Method Not Allowed"))
-
-		app.clientError(w, 405) // Alternative way of writing error response
+func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
+	//Parse the form data and populate r.PostForm map
+	if err := r.ParseForm(); err != nil {
+		app.clientError(w, http.StatusBadRequest)
 		return
 	}
-	// w.Write([]byte("Snippet is created"))
 
-	title := "0 snail"
-	content := "0 snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n- Kobayashi Issa"
-	expires := 7
+	//Convert the value of the form data expires to int
+	expires, err := strconv.Atoi(r.PostForm.Get("expires"))
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	//Initializing Struct SnippetCreateForm to hold the inputed data by user
+
+	form := SnippetCreateForm{
+		Title:   r.PostForm.Get("title"),
+		Content: r.PostForm.Get("content"),
+		Expires: expires,
+	}
+
+	// Using CheckFied() to write appropriate error message after validating the form
+	form.CheckField(validator.NotBlank(form.Title), "title", "*This field cannot be blank!")
+	form.CheckField(validator.MaxChars(form.Title, 100), "title", "*This field cannot be morethan 100 characters")
+	form.CheckField(validator.NotBlank(form.Content), "content", "*This field cannot be blank!")
+	form.CheckField(validator.PermittedInt(expires, 1, 7, 365), "expires", "*This field must not take value other than 1, 7 or 365")
+
+	if !form.Valid() {
+		data := app.newTemplateData(r)
+		data.Form = form
+		app.render(w, http.StatusUnprocessableEntity, "create.tmpl.html", data)
+		return
+	}
 
 	//Passing the data to SnippetModel
-	id, err := app.snippets.Insert(title, content, expires)
+	id, err := app.snippets.Insert(form.Title, form.Content, form.Expires)
 	if err != nil {
 		app.serverError(w, err)
 		return
 	}
 
 	//Redirect the user to the relevant page for the snippet.
-	http.Redirect(w, r, fmt.Sprintf("/snippet/view?id=%d", id), http.StatusSeeOther)
+	http.Redirect(w, r, fmt.Sprintf("/snippet/view/%d", id), http.StatusSeeOther)
 
+}
+
+func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
+	data := app.newTemplateData(r)
+
+	//Initialize the Form field in the templateData and you can set default Expires value
+	data.Form = SnippetCreateForm{
+		Expires: 1,
+	}
+
+	app.render(w, http.StatusOK, "create.tmpl.html", data)
 }
