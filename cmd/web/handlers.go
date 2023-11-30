@@ -72,21 +72,6 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// //Convert the value of the form data expires to int
-	// expires, err := strconv.Atoi(r.PostForm.Get("expires"))
-	// if err != nil {
-	// 	app.clientError(w, http.StatusBadRequest)
-	// 	return
-	// }
-
-	// //Initializing Struct SnippetCreateForm to hold the inputed data by user
-
-	// form := SnippetCreateForm{
-	// 	Title:   r.PostForm.Get("title"),
-	// 	Content: r.PostForm.Get("content"),
-	// 	Expires: expires,
-	// }
-
 	// Using CheckFied() to write appropriate error message after validating the form
 	form.CheckField(validator.NotBlank(form.Title), "title", "*This field cannot be blank!")
 	form.CheckField(validator.MaxChars(form.Title, 100), "title", "*This field cannot be morethan 100 characters")
