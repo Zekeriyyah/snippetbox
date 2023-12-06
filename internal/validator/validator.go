@@ -7,7 +7,8 @@ import (
 )
 
 type Validator struct {
-	FieldErrors map[string]string
+	NonFieldErrors []string
+	FieldErrors    map[string]string
 }
 
 // Create var storing the email regular expression
@@ -15,7 +16,7 @@ var EmailRX = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9
 
 // Check if all fields are valid
 func (v *Validator) Valid() bool {
-	return len(v.FieldErrors) == 0
+	return len(v.FieldErrors) == 0 && len(v.NonFieldErrors) == 0
 }
 
 // Add error in the FieldErrors map if any
@@ -29,6 +30,11 @@ func (v *Validator) AddFieldError(key string, msg string) {
 	if _, exist := v.FieldErrors[key]; !exist {
 		v.FieldErrors[key] = msg
 	}
+}
+
+// Add NonFieldError to the the list of NonFieldErrors in the validator
+func (v *Validator) AddNonFieldError(message string) {
+	v.NonFieldErrors = append(v.NonFieldErrors, message)
 }
 
 // Check the field and add an error message to FieldErrors if validation check is not ok
