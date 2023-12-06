@@ -24,6 +24,7 @@ type application struct {
 	templateCache  map[string]*template.Template
 	formDecoder    *form.Decoder
 	sessionManager *scs.SessionManager
+	user           *models.UserModel
 }
 
 func main() {
@@ -73,6 +74,9 @@ func main() {
 	sessionManager.Store = mysqlstore.New(DB)
 	sessionManager.Lifetime = 12 * time.Hour //Set the max time for the session to expire
 
+	//Initializing UserModel{}
+	user := &models.UserModel{DB: DB}
+
 	app := &application{
 		errorLog:       errorLog,
 		infoLog:        infoLog,
@@ -80,6 +84,7 @@ func main() {
 		templateCache:  templateCache,
 		formDecoder:    formDecoder,
 		sessionManager: sessionManager,
+		user:           user,
 	}
 
 	//Configure the tls server to use non-default curve during tls handshake
