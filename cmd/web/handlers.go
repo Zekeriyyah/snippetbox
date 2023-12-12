@@ -26,6 +26,13 @@ type userSignupForm struct {
 	validator.Validator `form:"-"`
 }
 
+// struct to hold user login data
+type userLoginForm struct {
+	Email               string `form:"email"`
+	Password            string `form:"password"`
+	validator.Validator `form:"-"`
+}
+
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
 
 	snippets, err := app.snippets.Latest()
@@ -176,13 +183,78 @@ func (app *application) userSignupPost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) userLogin(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Display a HTML form for user login...")
+	data := app.newTemplateData(r)
+	data.Form = userLoginForm{}
+	app.render(w, http.StatusOK, "login.tmpl.html", data)
 }
 
 func (app *application) userLoginPost(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Authenticate and login the user...")
+	//Decode form data into userLoginForm struct
+	var form userLoginForm
+	err := app.decodePostForm(r, &form)
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	//Perform validation check on the email and password
+	form.CheckField(validator.NotBlank(form.Email), "email", "**This field cannot be blank!")
+	form.CheckField(validator.Matches(form.Email, validator.EmailRX), "email", "**This field must be a valid email")
+	form.CheckField(validator.NotBlank(form.Password), "password", "This field cannot be blank")
+
+	//Re-render the login form with error msg if any
+	if !form.Valid() {
+		data := app.newTemplateData(r)
+		data.Form = form
+		app.render(w, http.StatusUnprocessableEntity, "login.tmpl.html", data)
+		return
+	}
+
+	//Authenticate user for login
+	id, err := app.user.Authenticate(form.Email, form.Password)
+	if err != nil {
+		if errors.Is(err, models.ErrInvalidCredentials) {
+			form.AddNonFieldError("**email or password is incorrect!")
+
+			data := app.newTemplateData(r)
+			data.Form = form
+			app.render(w, http.StatusUnprocessableEntity, "login.tmpl.html", data)
+			return
+		} else {
+			app.serverError(w, err)
+			return
+		}
+		return
+	}
+
+	//Renew the session ID for fresh login of user
+	err = app.sessionManager.RenewToken(r.Context())
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	//Add the already authenticated user's ID to the session data
+	app.sessionManager.Put(r.Context(), "authenticatedUserID", id)
+
+	//Redirect the user to the create snippet page
+	http.Redirect(w, r, "/snippet/create", http.StatusSeeOther)
 }
 
-func (app *application) userLogout(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Logout the user...")
+func (app *application) userLogoutPost(w http.ResponseWriter, r *http.Request) {
+	//Renew user Token
+	err := app.sessionManager.RenewToken(r.Context())
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	// Remove authentication ID of user
+	app.sessionManager.Remove(r.Context(), "authenticatedUserID")
+
+	// Deem user of successful logout
+	app.sessionManager.Put(r.Context(), "flash", "You've been logged out successfully!")
+
+	//Redirect user to home page
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
