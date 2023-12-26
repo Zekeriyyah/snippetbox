@@ -238,7 +238,7 @@ func (app *application) userLoginPost(w http.ResponseWriter, r *http.Request) {
 	app.sessionManager.Put(r.Context(), "authenticatedUserID", id)
 
 	//Redirect the user to the create snippet page
-	http.Redirect(w, r, "/snippet/create", http.StatusSeeOther)
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
 func (app *application) userLogoutPost(w http.ResponseWriter, r *http.Request) {

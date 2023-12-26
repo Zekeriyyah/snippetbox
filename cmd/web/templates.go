@@ -9,11 +9,13 @@ import (
 )
 
 type templateData struct {
-	CurrentYear int
-	Snippet     *models.Snippet
-	Snippets    []*models.Snippet
-	Form        any
-	Flash       string //to store flash msg for rendering
+	CurrentYear     int
+	Snippet         *models.Snippet
+	Snippets        []*models.Snippet
+	Form            any
+	Flash           string //to store flash msg for rendering
+	IsAuthenticated bool   //To check is a session has AuthenticatedUserID field
+	CSRFToken       string //To store the csrf token
 }
 
 func newTemplateCache() (map[string]*template.Template, error) {

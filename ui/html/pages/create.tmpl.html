@@ -2,6 +2,8 @@
 
 {{define "main"}}
 <form action="/snippet/create" method="POST">
+    <!--Input the CSRF token in this form-->
+    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
     <div>
         <label>Title</label>
         <!--Use 'with' statement to render FieldErrors value if not empty-->
