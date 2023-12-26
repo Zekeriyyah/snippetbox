@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+
+	"github.com/justinas/nosurf"
 )
 
 func secureHeaders(next http.Handler) http.Handler {
@@ -41,6 +44,58 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 				app.serverError(w, fmt.Errorf("%s", err))
 			}
 		}()
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (app *application) requireAuthentication(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//if user is not login, redirect to login page
+		if !app.isAuthenticated(r) {
+			http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+			return
+		}
+
+		//Set header to avoid storage in the user browser's cache
+		w.Header().Add("Cache-Control", "no-store")
+		// Serve the next handler
+		next.ServeHTTP(w, r)
+
+	})
+}
+
+func noSurf(next http.Handler) http.Handler {
+	csrfHandler := nosurf.New(next)
+	csrfHandler.SetBaseCookie(http.Cookie{
+		HttpOnly: true,
+		Path:     "/",
+		Secure:   true,
+	})
+
+	return csrfHandler
+}
+
+func (app *application) authenticate(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+		id := app.sessionManager.GetInt(r.Context(), "authenticatedUserID") // Retrieve an autnenticated user id from the session,
+		if id == 0 {                                                        // it returns zero if not found, serve the normal http in such case
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		exists, err := app.user.Exists(id) // Check if user exist in the database
+		if err != nil {
+			app.serverError(w, err)
+			return
+		}
+
+		if exists { // if the the user exists, set isAuthenticated to true and add the data to the request context
+			ctx := r.Context()
+			ctx = context.WithValue(ctx, isAuthenticatedContextKey, true)
+			r = r.WithContext(ctx)
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }
