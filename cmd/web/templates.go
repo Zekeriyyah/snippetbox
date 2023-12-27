@@ -14,7 +14,7 @@ type templateData struct {
 	Snippets        []*models.Snippet
 	Form            any
 	Flash           string //to store flash msg for rendering
-	IsAuthenticated bool   //To check is a session has AuthenticatedUserID field
+	IsAuthenticated bool   //To check if a session has AuthenticatedUserID field
 	CSRFToken       string //To store the csrf token
 }
 
