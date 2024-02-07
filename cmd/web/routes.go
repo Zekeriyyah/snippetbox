@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/Zekeriyyah/snippetbox/ui"
 	"github.com/julienschmidt/httprouter"
 	"github.com/justinas/alice"
 )
@@ -16,14 +17,24 @@ func (app *application) routes() http.Handler {
 		app.notFound(w)
 	})
 
-	//Register mux To handle static file
-	fileServer := http.FileServer(http.Dir("./ui/static/"))
-	router.Handler(http.MethodGet, "/static/*filepath", http.StripPrefix("/static", fileServer))
+	/*	====== NO LONGER SERVING STATIC FILES FROM THE DISK
+
+		//Register mux To handle static file
+		fileServer := http.FileServer(http.Dir("./ui/static/"))
+		router.Handler(http.MethodGet, "/static/*filepath", http.StripPrefix("/static", fileServer))
+	*/
+
+	//SERVING STATIC FILES FROM EMBEDDED FILE SYSTEM IN GLOBAL VARIABLE ui.Files
+	fileServer := http.FileServer(http.FS(ui.Files))
+	router.Handler(http.MethodGet, "/static/*filepath", fileServer)
+
+	router.HandlerFunc(http.MethodGet, "/ping", ping)
 
 	// Create a dynamic middleware chain for session manager to wrap the routes except /static/*filepath
 	dynamic := alice.New(app.sessionManager.LoadAndSave, noSurf, app.authenticate)
 
 	// middleware for some protected routes such as Get /snippet/create, Post /snippet/create, and Post /user/logout
+
 	protected := dynamic.Append(app.requireAuthentication)
 
 	//Register the other application routes

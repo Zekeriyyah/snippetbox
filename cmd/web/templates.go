@@ -2,10 +2,12 @@ package main
 
 import (
 	"html/template"
+	"io/fs"
 	"path/filepath"
 	"time"
 
 	"github.com/Zekeriyyah/snippetbox/internal/models"
+	"github.com/Zekeriyyah/snippetbox/ui"
 )
 
 type templateData struct {
@@ -22,40 +24,27 @@ func newTemplateCache() (map[string]*template.Template, error) {
 	//Initialize a map to act as cache
 	cache := map[string]*template.Template{}
 
-	//Getting the all the file path for the page
-	pages, err := filepath.Glob("./ui/html/pages/*.tmpl.html")
+	// Parsing file from the embedded files
+	pages, err := fs.Glob(ui.Files, "html/pages/*.tmpl.html")
 	if err != nil {
 		return nil, err
 	}
 
 	//Loop through the pages and parse the file path
 	for _, page := range pages {
-		//Store the main path name i.e homt.tmpl.html in var name
+		//Store the main path name i.e home.tmpl.html in var name
 		name := filepath.Base(page)
 
 		//Create a slice to hold the static files to be parse
-
-		// //To parse the base template
-		// ts, err := template.ParseFiles("./ui/html/base.tmpl.html")
-		// if err != nil {
-		// 	return nil, err
-		// }
-
-		//To make use of custom template function humanDate, register the FuncMap with the template set and call ParseFile
-		//to parse the templates
-
-		ts, err := template.New(name).Funcs(functions).ParseFiles("./ui/html/base.tmpl.html")
-		if err != nil {
-			return nil, err
+		patterns := []string{
+			"html/base.tmpl.html",
+			"html/partials/*.tmpl.html",
+			page,
 		}
 
-		//To parse all template files in the partials directory
-		ts, err = ts.ParseGlob("./ui/html/partials/*.tmpl.html")
-		if err != nil {
-			return nil, err
-		}
+		//parse the templates using ParseFS instead of ParseFiles since from embedded files
 
-		ts, err = ts.ParseFiles(page)
+		ts, err := template.New(name).Funcs(functions).ParseFS(ui.Files, patterns...)
 		if err != nil {
 			return nil, err
 		}
@@ -70,7 +59,12 @@ func newTemplateCache() (map[string]*template.Template, error) {
 }
 
 func humanDate(t time.Time) string {
-	return t.Format("02 Jan 2006 at 15:04")
+
+	if t.IsZero() {
+		return ""
+	}
+
+	return t.UTC().Format("02 Jan 2006 at 15:04")
 }
 
 var functions = template.FuncMap{
