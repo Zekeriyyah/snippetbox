@@ -9,9 +9,9 @@ import (
 	"testing"
 )
 
-func newTestApplication(t *testing.T) {
+func newTestApplication(t *testing.T) *application {
 
-	app := &application{
+	return &application{
 		errorLog: log.New(io.Discard, "", 0),
 		infoLog:  log.New(io.Discard, "", 0),
 	}
